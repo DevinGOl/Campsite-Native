@@ -8,22 +8,27 @@ import Reservation from './ReservationComponent';
 import Favorites from './FavoritesComponent';
 import Constants from 'expo-constants';
 import Login from './LoginComponent';
-import { View, Platform, StyleSheet, Text, ScrollView, Image } from 'react-native';
+import { View, Platform, StyleSheet, Text, ScrollView, Image, Alert, ToastAndroid } from 'react-native';
 import { createStackNavigator } from 'react-navigation-stack';
 import { createAppContainer } from 'react-navigation';
 import { createDrawerNavigator, DrawerItems } from 'react-navigation-drawer';
 import { Icon } from 'react-native-elements';
 import SafeAreaView from 'react-native-safe-area-view';
 import { connect } from 'react-redux';
-import { fetchCampsites, fetchComments, fetchPromotions,
-    fetchPartners } from '../redux/ActionCreators';
+import {
+    fetchCampsites, fetchComments, fetchPromotions,
+    fetchPartners
+} from '../redux/ActionCreators';
+import NetInfo from '@react-native-community/netinfo';
+import { setStatusBarNetworkActivityIndicatorVisible } from 'expo-status-bar';
 
-    const mapDispatchToProps = {
-        fetchCampsites,
-        fetchComments,
-        fetchPromotions,
-        fetchPartners
-    };
+
+const mapDispatchToProps = {
+    fetchCampsites,
+    fetchComments,
+    fetchPromotions,
+    fetchPartners
+};
 
 const DirectoryNavigator = createStackNavigator(
     {
@@ -197,117 +202,117 @@ const CustomDrawerContentComponent = props => (
     <ScrollView>
         <SafeAreaView
             style={styles.container}
-            forceInset={{top: 'always', horizontal: 'never'}} >
-                <View style={styles.drawerHeader}>
-                    <View style={{flex: 1}}>
-                        <Image
-                            source={require('./images/logo.png')} style={styles.drawerImage} />
-                    </View>
-                    <View style={{flex: 2}}>
+            forceInset={{ top: 'always', horizontal: 'never' }} >
+            <View style={styles.drawerHeader}>
+                <View style={{ flex: 1 }}>
+                    <Image
+                        source={require('./images/logo.png')} style={styles.drawerImage} />
+                </View>
+                <View style={{ flex: 2 }}>
                     <Text style={styles.drawerHeaderText}>NuCamp</Text>
 
-                    </View> 
-
                 </View>
-                <DrawerItems {...props} />
+
+            </View>
+            <DrawerItems {...props} />
         </SafeAreaView>
     </ScrollView>
 )
 
 const MainNavigator = createDrawerNavigator(
     {
-        Login: { 
+        Login: {
             screen: LoginNavigator,
             navigationOptions: {
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='sign-in'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         },
-        Home: { 
+        Home: {
             screen: HomeNavigator,
             navigationOptions: {
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='home'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         },
-        Directory: { 
+        Directory: {
             screen: DirectoryNavigator,
             navigationOptions: {
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='list'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         },
-        Reservation: { 
+        Reservation: {
             screen: ReservationNavigator,
             navigationOptions: {
                 drawerLabel: 'Reserve Campsite',
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='tree'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         },
-        Favorites: { 
+        Favorites: {
             screen: FavoritesNavigator,
             navigationOptions: {
                 drawerLabel: 'My Favorites',
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='heart'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         },
-        About: { 
+        About: {
             screen: AboutNavigator,
             navigationOptions: {
                 drawerLabel: 'About Us',
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='info-circle'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         },
-        Contact: { 
+        Contact: {
             screen: ContactNavigator,
             navigationOptions: {
                 drawerLabel: 'Contact Us',
-                drawerIcon: ({tintColor}) => (
+                drawerIcon: ({ tintColor }) => (
                     <Icon
                         name='address-card'
                         type='font-awesome'
                         size={24}
                         color={tintColor}
-                        />
+                    />
                 )
             }
         }
@@ -328,6 +333,46 @@ class Main extends Component {
         this.props.fetchComments();
         this.props.fetchPromotions();
         this.props.fetchPartners();
+
+        this.showNetInfo();
+
+        this.unsubscribeNetInfo = NetInfo.addEventListener(connectionInfo => {
+            this.handleConnectivityChange(connectionInfo);
+       });
+   }
+
+    componentWillUnmount() {
+        this.unsubscribeNetInfo();
+    }
+
+    showNetInfo = async () => {
+        const connectionInfo = await NetInfo.fetch();
+
+        (Platform.OS === 'ios')
+            ? Alert.alert('Initial Network Connectivity Type:', connectionInfo.type)
+            : ToastAndroid.show('Initial Network Connectivity Type: ' +
+                connectionInfo.type, ToastAndroid.LONG);
+    }
+
+    handleConnectivityChange = connectionInfo => {
+        let connectionMsg = 'You are now connected to an active network.';
+        switch (connectionInfo.type) {
+            case 'none':
+                connectionMsg = 'No network connection is active.';
+                break;
+            case 'unknown':
+                connectionMsg = 'The network connection state is now unknown.';
+                break;
+            case 'cellular':
+                connectionMsg = 'You are now connected to a cellular network.';
+                break;
+            case 'wifi':
+                connectionMsg = 'You are now connected to a WiFi network.';
+                break;
+        }
+        (Platform.OS === 'ios')
+            ? Alert.alert('Connection change:', connectionMsg)
+            : ToastAndroid.show(connectionMsg, ToastAndroid.LONG);
     }
 
     render() {
